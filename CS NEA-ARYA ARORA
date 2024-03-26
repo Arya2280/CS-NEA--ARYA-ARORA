@@ -446,41 +446,37 @@ class Ludo:
 
 
 
-            # Total number of players: Control take at first
+
+  # Total number of players: Control take at first
+
     def take_initial_control(self):
-                for i in range(4):
-                    self.block_value_predict[i][1]['state'] = DISABLED
+        def filtering():
+            total_players = take_entry.get()
+            if total_players.isdigit() and 2 <= int(total_players) <= 4:
+                self.total_people_play = list(range(int(total_players)))
+                print(self.total_people_play)
+                root.destroy()
+            else:
+                messagebox.showerror("Input Error", "Please input a number of players between 2 and 4")
 
-                # Making another window to control take
-                top = Toplevel()
-                top.geometry("600x150")
-                top.maxsize(600, 150)
-                top.minsize(600, 150)
-                top.config(bg="orange")
-                top.iconbitmap("C:/Users/Arya/OneDrive/Desktop/Ludo-Game/Images/LUDO.ico")
+        root = Tk()
+        root.geometry("600x150")
+        root.title("Total number of players")
+        root.config(bg="orange")
 
-                head = Label(top, text="-:Total number of players:- ", font=("Arial", 25, "bold", "italic"),
-                             bg="orange", fg="chocolate")
-                head.place(x=70, y=30)
-                take_entry = Entry(top, font=("Arial", 18, "bold", "italic"), relief=SUNKEN, bd=7, width=12)
-                take_entry.place(x=150, y=80)
-                take_entry.focus()
+        head = Label(root, text="-:Total number of players:- ", font=("Arial", 25, "bold", "italic"),
+                     bg="orange", fg="chocolate")
+        head.pack(pady=10)
 
-                def filtering():  # Total player input value filtering
-                    response_take = self.input_filtering(take_entry.get())
-                    if response_take is True and int(take_entry.get()) > 1:
-                        for player_index in range(int(take_entry.get())):
-                            self.total_people_play.append(player_index)
-                        print(self.total_people_play)
-                        self.make_command()
-                        top.destroy()
-                    else:
-                        messagebox.showerror("Input Error", "Please input number of players between 2 and 4")
+        take_entry = Entry(root, font=("Arial", 18, "bold", "italic"), relief="sunken", bd=7, width=12)
+        take_entry.pack()
 
-                submit_btn = Button(top, text="Submit", bg="black", fg="#00FF00", font=("Arial", 13, "bold"),
-                                    relief=RAISED, bd=8, command=filtering)
-                submit_btn.place(x=350, y=80)
-                top.mainloop()
+        submit_btn = Button(root, text="Submit", bg="black", fg="#00FF00", font=("Arial", 13, "bold"),
+                            relief="raised", bd=8, command=filtering)
+        submit_btn.pack(pady=10)
+
+        root.mainloop()
+
     def make_prediction(self,color_indicator):
         try:
             if color_indicator == "red":
@@ -1251,7 +1247,7 @@ class Move:
         self.green_counter = 0
         self.blue_counter = 0
 
-# Initialize the user details array
+# Initialise the user details array
 userDetails = [[None] * 200, [None] * 200]
 
 
@@ -1702,4 +1698,141 @@ if __name__ == "__main__":
     Ludo(root, six_side_block, five_side_block, four_side_block, three_side_block, two_side_block, one_side_block)
 
     root.mainloop()
+
+from tkinter import *
+import random
+from tkinter import messagebox
+
+# Setting up the window
+window = Tk()
+window.title("Ludo")
+window.geometry("1200x1000")
+window.config(bg="lightyellow")
+
+# Player colours
+player_colors = ["red", "blue", "green", "yellow"]
+
+# Token positions for each player (starting positions)
+token_positions = {
+    "red": [(50, 500), (100, 500), (50, 450), (100, 450)],
+    "blue": [(400, 500), (450, 500), (400, 450), (450, 450)],
+    "green": [(50, 50), (100, 50), (50, 100), (100, 100)],
+    "yellow": [(400, 50), (450, 50), (400, 100), (450, 100)]
+}
+
+# Global variables
+selected_player = None
+selected_token = None
+dice_value = None
+
+
+# Function to roll the dice
+def rolldice():
+    global dice_value
+    dice = ['\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685']
+    dice_value = random.choice(dice)
+    dice_label.configure(text=f'Dice: {dice_value}')
+    move_button.config(state=NORMAL)
+
+
+# Function to select a token
+def select_token(event, player, token_index):
+    global selected_player, selected_token
+    selected_player = player
+    selected_token = token_index
+
+
+# Function to move token based on dice roll
+def move_token():
+    global selected_player, selected_token, dice_value
+    if selected_player is not None and dice_value is not None:
+        player_tokens = token_positions[selected_player]
+        pos = player_tokens[selected_token]
+        x, y = pos
+
+        # Movement logic for each player and each dice value
+        if dice_value == '\u2680':
+            x += 50
+        elif dice_value == '\u2681':
+            y -= 50
+        elif dice_value == '\u2682':
+            x -= 50
+        elif dice_value == '\u2683':
+            y += 50
+        elif dice_value == '\u2684':
+            x += 70
+            y += 70
+        elif dice_value == '\u2685':
+            x += 100
+            y += 100
+
+        # boundary checks to prevent moving out of canvas
+        if 0 <= x <= 600 and 0 <= y <= 600:
+            # Moving token on canvas and update token_positions
+            canvas.move(selected_token_shapes[selected_player][selected_token], x - pos[0], y - pos[1])
+            token_positions[selected_player][selected_token] = (x, y)
+
+            # Checking if all tokens of the current player are in the win box
+            win_count = 0
+            for token_pos in token_positions[selected_player]:
+                if token_pos == (300, 50):
+                    win_count += 1
+            if win_count == 4:
+                messagebox.showinfo("Congratulations!", f"{selected_player.capitalize()} Wins!")
+                game_ended = True
+                roll_button.config(state=DISABLED)
+                move_button.config(state=DISABLED)
+
+
+# Drawing Ludo board
+canvas = Canvas(window, width=600, height=600, bg="white")
+canvas.place(x=100, y=100)
+
+
+# Drawing winning box
+canvas.create_rectangle(250, 250, 350, 350, fill="gold")
+canvas.create_text(300, 300, text="WIN", font=('helvetica', 24, 'bold'), fill="black")
+
+
+# Function to draw tokens
+def draw_tokens():
+    global selected_token_shapes
+    selected_token_shapes = {}
+    for color, positions in token_positions.items():
+        selected_token_shapes[color] = []
+        for i, pos in enumerate(positions):
+            x, y = pos
+            shape = canvas.create_oval(x, y, x + 25, y + 25, fill=color, outline="black")
+            selected_token_shapes[color].append(shape)
+            canvas.tag_bind(shape, '<Button-1>',
+                            lambda event, player=color, token_index=i: select_token(event, player, token_index))
+
+
+# Creating player selection buttons
+player_label = Label(window, text="Selected Player: ", font=('helvetica', 14, 'bold'), bg="lightyellow")
+player_label.place(x=800, y=100)
+
+player_buttons = []
+for i, color in enumerate(player_colors):
+    btn = Button(window, text=f"Player {i + 1}", bg=color, command=lambda color=color: select_player(color))
+    btn.place(x=900, y=150 + i * 50)
+    player_buttons.append(btn)
+
+# Creating dice rolling button
+roll_button = Button(window, text="Roll Dice", font=('helvetica', 14, 'bold'), command=rolldice, bg="orange")
+roll_button.place(x=800, y=400)
+
+# Creating a label to display dice value
+dice_label = Label(window, text="Dice: ", font=('helvetica', 14, 'bold'), bg="lightyellow")
+dice_label.place(x=800, y=450)
+
+# Creating button to move token
+move_button = Button(window, text="Move Token", font=('helvetica', 14, 'bold'), command=move_token, bg="green",
+                     state=DISABLED)
+move_button.place(x=800, y=500)
+
+# Draw tokens initially
+draw_tokens()
+
+window.mainloop()
 
